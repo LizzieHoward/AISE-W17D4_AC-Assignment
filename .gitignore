@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.uv/
+
+# uv
+.uv_cache/
+
+# Model caches
+.cache/
+models/
+huggingface_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Large downloads - keep structure but not contents
+data/downloads/
+data/images/
+
+# Keep outputs for review but ignore temp processing files
+outputs/*.tmp
+outputs/temp/
