@@ -4,8 +4,8 @@
 
 - **Python**: 3.9 or higher
 - **uv**: Package and project manager ([installation guide](https://github.com/astral-sh/uv))
-- **Internet**: Required for first run (downloads model and dataset)
-- **Disk space**: ~1GB for model weights and dataset cache
+- **Internet**: Required for first run (downloads model and test images)
+- **Disk space**: ~1.5GB for model weights and image cache
 - **RAM**: 2GB minimum, 4GB recommended
 
 ## Setup
@@ -37,15 +37,16 @@ This command will:
 uv run python -m caption_prototype.run
 ```
 
-**First run**: 5-10 minutes (downloads ~500MB of models and data)
-**Subsequent runs**: <1 minute (uses cached files)
+**First run**: 2-5 minutes (downloads ~1GB model + ~2MB images)
+**Subsequent runs**: <30 seconds (uses cached files)
 
 ### Expected Output
 
 The command will:
-1. Display progress for each of 10 test cases
-2. Print a summary table to console
-3. Generate output files:
+1. Download 10 test images from picsum.photos (first run only)
+2. Display progress for each of 10 test cases
+3. Print a summary table to console
+4. Generate output files:
    - `outputs/results.csv` - Structured test results
    - `outputs/results.json` - Machine-readable detailed results
    - `outputs/failure_examples.md` - Documented failure analysis
@@ -54,7 +55,7 @@ The command will:
 
 ```
 Loading model: nlpconnect/vit-gpt2-image-captioning...
-Loading dataset: COCO 2017 validation...
+Loading test cases from data/manifest.csv...
 Running 10 test cases...
 
 [1/10] TC-01 Clear Common Object... ✓
@@ -71,13 +72,13 @@ Failure examples saved to outputs/failure_examples.md
 ### Caching
 
 - **Model cache**: `~/.cache/huggingface/transformers/`
-- **Dataset cache**: `~/.cache/huggingface/datasets/`
+- **Image cache**: `.cache/images/` (in project root)
 - **uv cache**: `.uv_cache/` (in project root)
 
 To clear caches and re-download:
 ```bash
 rm -rf ~/.cache/huggingface
-rm -rf .uv_cache
+rm -rf .cache/images
 ```
 
 ### Offline Use
@@ -119,17 +120,15 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
    uv run python -c "from transformers import VisionEncoderDecoderModel; VisionEncoderDecoderModel.from_pretrained('nlpconnect/vit-gpt2-image-captioning')"
    ```
 
-### Issue: Dataset download fails
+### Issue: Image download fails
 
-**Symptoms**: `datasets.builder.DatasetGenerationError`
+**Symptoms**: "Failed to load" messages for test images
 
 **Solutions**:
-1. Retry with `uv run python -m caption_prototype.run`
-2. Check available disk space (need ~500MB)
-3. Manually pre-download:
-   ```bash
-   uv run python -c "from datasets import load_dataset; load_dataset('HuggingFaceM4/COCO', split='validation[:100]')"
-   ```
+1. Check internet connection
+2. Picsum.photos URLs are very stable and require no authentication
+3. Images are cached after first successful download
+4. Placeholder images are used automatically on failure
 
 ### Issue: Out of memory
 
@@ -215,7 +214,7 @@ All files should be non-empty and contain valid data.
 - [ ] Repository cloned
 - [ ] `uv sync` completed successfully
 - [ ] Internet connection available (first run)
-- [ ] At least 1GB free disk space
+- [ ] At least 1.5GB free disk space
 - [ ] `uv run python -m caption_prototype.run` completes without errors
 - [ ] `outputs/results.csv` generated and contains 10 rows
 - [ ] `outputs/failure_examples.md` generated and contains 8+ examples

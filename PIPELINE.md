@@ -21,12 +21,12 @@ graph LR
 
 1. **Test Manifest** (`data/manifest.csv`)
    - 10 curated test cases with stress slice labels
-   - Source: COCO dataset via Hugging Face
+   - Source: Public images from picsum.photos
    - Includes normal, edge, and refusal cases
 
-2. **Dataset Loader** (`dataset.py`)
-   - Downloads COCO captions validation split
-   - Filters for specific test criteria
+2. **Image Loader** (`dataset.py`)
+   - Downloads images from picsum.photos URLs
+   - Caches images locally
    - Returns PIL Image objects
 
 3. **Image Preprocessing**
@@ -106,6 +106,6 @@ graph LR
 ## Performance Notes
 
 - **Inference time**: ~2-5 seconds per image (CPU)
-- **Memory**: ~1.5GB model weights + ~500MB dataset cache
-- **First run**: 5-10 minutes (downloads)
-- **Subsequent runs**: <1 minute (cached)
+- **Memory**: ~1.5GB model weights + ~2MB images
+- **First run**: 2-5 minutes (model download)
+- **Subsequent runs**: <30 seconds (cached)

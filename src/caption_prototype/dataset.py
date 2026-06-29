@@ -6,7 +6,8 @@ import csv
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from PIL import Image
-from datasets import load_dataset
+import requests
+from io import BytesIO
 
 
 class TestCase:
@@ -20,7 +21,7 @@ class TestCase:
         expected_behavior: str,
         requires_refusal: bool,
         refusal_category: Optional[str] = None,
-        image_id: Optional[int] = None,
+        image_id: Optional[str] = None,  # Now stores URL as string
         notes: Optional[str] = None
     ):
         self.test_id = test_id
@@ -29,7 +30,7 @@ class TestCase:
         self.expected_behavior = expected_behavior
         self.requires_refusal = requires_refusal
         self.refusal_category = refusal_category
-        self.image_id = image_id
+        self.image_id = image_id  # URL string
         self.notes = notes
         self.image: Optional[Image.Image] = None
     
@@ -69,7 +70,7 @@ def load_manifest(manifest_path: Path) -> List[TestCase]:
                 expected_behavior=row['expected_behavior'],
                 requires_refusal=row['requires_refusal'].lower() == 'true',
                 refusal_category=row.get('refusal_category') or None,
-                image_id=int(row['image_id']) if row.get('image_id') else None,
+                image_id=row.get('image_id') or None,  # Keep as string (URL)
                 notes=row.get('notes') or None
             )
             test_cases.append(test_case)
@@ -77,80 +78,63 @@ def load_manifest(manifest_path: Path) -> List[TestCase]:
     return test_cases
 
 
-def load_coco_images(test_cases: List[TestCase], cache_dir: Optional[str] = None) -> List[TestCase]:
+def load_images_from_urls(test_cases: List[TestCase], cache_dir: Optional[Path] = None) -> List[TestCase]:
     """
-    Load images from COCO dataset for each test case.
+    Load images from URLs for each test case.
     
     Args:
-        test_cases: List of test cases with image_id specified
-        cache_dir: Optional cache directory for dataset
+        test_cases: List of test cases with image_url specified
+        cache_dir: Optional cache directory for downloaded images
         
     Returns:
         Test cases with images loaded
     """
-    print("Loading COCO dataset (validation split)...")
+    print("Loading images from URLs...")
     
-    dataset = None
+    # Create cache directory if specified
+    if cache_dir:
+        cache_dir = Path(cache_dir)
+        cache_dir.mkdir(parents=True, exist_ok=True)
     
-    # Try multiple dataset sources
-    dataset_sources = [
-        ("HuggingFaceM4/COCO", "validation[:1000]"),
-        ("detection-datasets/coco", "val[:1000]"),
-        ("yerevann/coco-karpathy", "val[:1000]"),
-    ]
-    
-    for dataset_name, split in dataset_sources:
-        try:
-            print(f"Attempting to load {dataset_name}...")
-            dataset = load_dataset(
-                dataset_name,
-                split=split,
-                cache_dir=cache_dir,
-                trust_remote_code=True
-            )
-            print(f"✓ Successfully loaded {dataset_name}")
-            break
-        except Exception as e:
-            print(f"✗ Could not load {dataset_name}: {str(e)[:100]}")
-            continue
-    
-    if dataset is None:
-        print("⚠️  Warning: Could not load any COCO dataset. Using placeholder images.")
-        print("    This is acceptable for demonstrating the pipeline structure.")
-        # Create placeholder images for all test cases
-        for test_case in test_cases:
+    for i, test_case in enumerate(test_cases, 1):
+        print(f"  [{i}/{len(test_cases)}] Loading {test_case.test_id}...", end=" ")
+        
+        if not test_case.image_id:  # Using image_id field to store URL
+            print("WARNING: No URL provided, using placeholder")
             test_case.image = Image.new('RGB', (224, 224), color=(128, 128, 128))
-        return test_cases
-    
-    # Create a mapping of image IDs to images
-    # For this prototype, we'll use indices as proxies for image IDs
-    print(f"Dataset loaded with {len(dataset)} images")
-    
-    for test_case in test_cases:
-        if test_case.image_id is not None and test_case.image_id < len(dataset):
-            # Get image from dataset
-            item = dataset[test_case.image_id]
+            continue
+        
+        image_url = test_case.image_id  # Reusing image_id field for URL
+        
+        # Check cache first
+        if cache_dir:
+            cache_filename = f"{test_case.test_id}.jpg"
+            cache_path = cache_dir / cache_filename
             
-            # Handle different dataset formats
-            if 'image' in item:
-                test_case.image = item['image']
-            elif 'img' in item:
-                test_case.image = item['img']
-            elif 'file_name' in item and 'coco_url' in item:
-                # Some datasets only have URLs, use placeholder
-                print(f"Note: {test_case.test_id} requires manual download, using placeholder")
-                test_case.image = Image.new('RGB', (224, 224), color='gray')
-            else:
-                print(f"Warning: Could not find image field for {test_case.test_id}")
-                # Create a placeholder image
-                test_case.image = Image.new('RGB', (224, 224), color='gray')
+            if cache_path.exists():
+                try:
+                    test_case.image = Image.open(cache_path).convert('RGB')
+                    print("OK (cached)")
+                    continue
+                except Exception as e:
+                    print(f"WARNING: Cache read failed: {e}")
+        
+        # Download image
+        try:
+            response = requests.get(image_url, timeout=10)
+            response.raise_for_status()
+            test_case.image = Image.open(BytesIO(response.content)).convert('RGB')
             
-            # Convert to RGB if needed
-            if hasattr(test_case.image, 'mode') and test_case.image.mode != 'RGB':
-                test_case.image = test_case.image.convert('RGB')
-        else:
-            print(f"Warning: Invalid image_id for {test_case.test_id}, using placeholder")
-            test_case.image = Image.new('RGB', (224, 224), color='gray')
+            # Save to cache
+            if cache_dir:
+                cache_path = cache_dir / f"{test_case.test_id}.jpg"
+                test_case.image.save(cache_path, 'JPEG')
+            
+            print("OK")
+        except Exception as e:
+            print(f"FAILED to load: {str(e)[:50]}")
+            # Use placeholder on error
+            test_case.image = Image.new('RGB', (224, 224), color=(128, 128, 128))
     
     return test_cases
 
@@ -161,11 +145,12 @@ def get_test_cases(manifest_path: Path, cache_dir: Optional[str] = None) -> List
     
     Args:
         manifest_path: Path to manifest CSV
-        cache_dir: Optional cache directory for dataset
+        cache_dir: Optional cache directory for images
         
     Returns:
         List of TestCase objects with images loaded
     """
     test_cases = load_manifest(manifest_path)
-    test_cases = load_coco_images(test_cases, cache_dir=cache_dir)
+    cache_path = Path(cache_dir) / "images" if cache_dir else None
+    test_cases = load_images_from_urls(test_cases, cache_dir=cache_path)
     return test_cases

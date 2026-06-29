@@ -14,9 +14,9 @@ uv run python -m caption_prototype.run
    - Downloads `nlpconnect/vit-gpt2-image-captioning` from Hugging Face
    - Cached in `~/.cache/huggingface/transformers/`
 
-2. **Dataset Download** (~500 MB, 1-3 minutes)
-   - Downloads COCO validation set from Hugging Face
-   - Cached in `~/.cache/huggingface/datasets/`
+2. **Image Download** (~2 MB, 5-10 seconds)
+   - Downloads 10 test images from picsum.photos
+   - Cached in `.cache/images/`
 
 3. **Run Tests** (10-30 seconds)
    - Processes 10 test cases
@@ -52,7 +52,7 @@ uv run python -m caption_prototype.run
 - Check firewall settings
 
 ### Out of disk space?
-- Need ~1.5 GB free for model and dataset caches
+- Need ~1.5 GB free for model and image caches
 
 ### Out of memory?
 - Close other applications
@@ -69,9 +69,10 @@ Loading model: nlpconnect/vit-gpt2-image-captioning...
 Model loaded on cpu
 
 Loading test cases...
-Loading COCO dataset (validation split)...
-Dataset loaded with XXXX images
-Loaded 10 test cases
+Loading images from URLs...
+  [1/10] Loading TC-01... ✓
+  ...
+  [10/10] Loading TC-10... ✓
 
 Running 10 test cases...
 

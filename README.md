@@ -12,7 +12,7 @@ This is a **reviewable prototype** for exploring image captioning failure modes 
 
 ## What This Prototype Does
 
-1. Loads a small public image dataset (COCO captions subset via Hugging Face)
+1. Loads 10 public test images from picsum.photos (stable placeholder service)
 2. Runs 10 curated test cases including:
    - Normal common objects
    - Multiple objects, small details, ambiguous scenes
@@ -43,8 +43,9 @@ uv run python -m caption_prototype.run
 ```
 
 The command will:
-- Download the model and dataset (first run only, ~500MB)
-- Process 10 test images
+- Download the model (first run only, ~1GB)
+- Download 10 test images from picsum.photos (~2MB total)
+- Process all test cases
 - Generate `outputs/results.csv` and `outputs/results.json`
 - Print a summary to console
 
@@ -64,8 +65,8 @@ The command will:
 
 ## Key Design Decisions
 
-- **No manual image collection**: Uses public COCO dataset
-- **Stress slice proxying**: Some stress categories (e.g., medical images) are simulated with dataset labels since COCO lacks true medical content
+- **No manual image collection**: Uses public images from picsum.photos (stable placeholder service)
+- **Stress slice coverage**: Diverse images selected to cover stress categories including blur effects, grayscale, people, and various scenes
 - **Refusal wrapper**: High-stakes cases return uncertainty messages instead of raw model output
 - **Minimal design**: No web UI, no over-engineering, just reproducible code + evidence
 
@@ -83,7 +84,7 @@ These failures are documented in [RESULTS.md](RESULTS.md) and [outputs/failure_e
 
 ## Notes
 
-- First run downloads ~500MB of model weights and dataset samples
-- Outputs are deterministic (fixed random seed)
+- First run downloads ~1GB of model weights and ~2MB of test images
+- Outputs are deterministic (same images and fixed random seed)
 - This is a **reviewable prototype**, not a production system
 - Failures are features, not bugs—they demonstrate model limitations

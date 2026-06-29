@@ -165,9 +165,9 @@ def run_prototype(
         
         # Print result
         if result.passed:
-            print("✓")
+            print("PASS")
         else:
-            print(f"✗ ({result.failure_type})")
+            print(f"FAIL ({result.failure_type})")
     
     return results
 
@@ -293,10 +293,10 @@ def main():
         # Print summary
         print_summary(results)
         
-        print("\n✓ Prototype execution completed successfully")
+        print("\nPrototype execution completed successfully")
         
     except Exception as e:
-        print(f"\n✗ Error during execution: {str(e)}")
+        print(f"\nError during execution: {str(e)}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
